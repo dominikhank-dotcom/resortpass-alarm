@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { AffiliateStat, AffiliateProfile } from '../types';
@@ -27,6 +28,8 @@ export const AffiliateDashboard: React.FC = () => {
   
   // Profile State
   const [profile, setProfile] = useState<AffiliateProfile>({
+      firstName: '',
+      lastName: '',
       street: '',
       houseNumber: '',
       zip: '',
@@ -39,6 +42,8 @@ export const AffiliateDashboard: React.FC = () => {
 
   // Check if mandatory fields are filled
   const isProfileComplete = 
+      profile.firstName !== '' &&
+      profile.lastName !== '' &&
       profile.street !== '' && 
       profile.houseNumber !== '' && 
       profile.zip !== '' && 
@@ -106,7 +111,7 @@ export const AffiliateDashboard: React.FC = () => {
                 </div>
                 <div className="ml-3">
                     <p className="text-sm text-yellow-700">
-                        <span className="font-bold">Auszahlungen pausiert:</span> Bitte vervollständige deine Adress- und Auszahlungsdaten im Reiter "Einstellungen & Auszahlung".
+                        <span className="font-bold">Auszahlungen pausiert:</span> Bitte vervollständige deine Namen, Adress- und Auszahlungsdaten im Reiter "Einstellungen & Auszahlung".
                     </p>
                 </div>
             </div>
@@ -271,6 +276,39 @@ export const AffiliateDashboard: React.FC = () => {
               </div>
               <form onSubmit={handleSaveProfile} className="px-4 py-5 sm:p-6 space-y-6">
                   
+                  {/* PERSÖNLICHE DATEN */}
+                  <div>
+                      <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Persönliche Daten (Pflichtfelder)</h4>
+                      <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                          <div className="sm:col-span-3">
+                              <label className="block text-sm font-medium text-gray-700">Vorname</label>
+                              <input
+                                  type="text"
+                                  name="firstName"
+                                  required
+                                  value={profile.firstName}
+                                  onChange={handleChange}
+                                  className="mt-1 focus:ring-ep-blue focus:border-ep-blue block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border"
+                                  placeholder="Max"
+                              />
+                          </div>
+                          <div className="sm:col-span-3">
+                              <label className="block text-sm font-medium text-gray-700">Nachname</label>
+                              <input
+                                  type="text"
+                                  name="lastName"
+                                  required
+                                  value={profile.lastName}
+                                  onChange={handleChange}
+                                  className="mt-1 focus:ring-ep-blue focus:border-ep-blue block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 border"
+                                  placeholder="Mustermann"
+                              />
+                          </div>
+                      </div>
+                  </div>
+
+                  <hr className="border-gray-200" />
+
                   {/* ADRESSE */}
                   <div>
                       <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Anschrift (Pflichtfelder)</h4>

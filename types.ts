@@ -1,3 +1,4 @@
+
 export enum AvailabilityStatus {
   SOLD_OUT = 'SOLD_OUT',
   AVAILABLE = 'AVAILABLE',
@@ -5,6 +6,8 @@ export enum AvailabilityStatus {
 }
 
 export interface AffiliateProfile {
+  firstName: string; // Neu
+  lastName: string;  // Neu
   street: string;
   houseNumber: string;
   zip: string;
