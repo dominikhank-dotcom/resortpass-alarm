@@ -10,6 +10,7 @@ import { CustomerRegistration } from './pages/CustomerRegistration';
 import { ImprintPage } from './pages/ImprintPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { User, AvailabilityStatus } from './types';
+import { ArrowLeft, Briefcase, Lock } from 'lucide-react';
 
 const MOCK_USER: User = {
   id: 'u1',
@@ -35,9 +36,20 @@ const App: React.FC = () => {
       silver: AvailabilityStatus.SOLD_OUT
   });
 
+  // Kunde Login
   const handleLogin = () => {
     setUser(MOCK_USER);
     setCurrentPage('dashboard');
+  };
+
+  // Partner Login (Spezifisch)
+  const handlePartnerLogin = () => {
+      setUser({
+          ...MOCK_USER,
+          name: 'Partner Demo',
+          isAffiliate: true
+      });
+      setCurrentPage('affiliate');
   };
 
   const handleLogout = () => {
@@ -54,7 +66,11 @@ const App: React.FC = () => {
 
   const navigate = (page: string) => {
     if (!user && (page === 'dashboard' || page === 'affiliate')) {
-        handleLogin();
+        if (page === 'affiliate') {
+            setCurrentPage('partner-login');
+        } else {
+            handleLogin(); // Default fallback
+        }
         return;
     }
     setCurrentPage(page);
@@ -70,7 +86,7 @@ const App: React.FC = () => {
       return (
         <PartnerRegistration 
             onBack={() => setCurrentPage('partner-info')}
-            onLogin={() => setCurrentPage('login')}
+            onLogin={() => setCurrentPage('partner-login')}
             onRegister={(userData) => {
                 // Simulate creating a new partner user
                 setUser({
@@ -163,35 +179,83 @@ const App: React.FC = () => {
           <PrivacyPolicyPage />
         )}
         
-        {/* Simple Login Mock */}
+        {/* Simple Customer Login Mock */}
         {currentPage === 'login' && (
-            <div className="flex items-center justify-center h-[80vh]">
-                <div className="bg-white p-8 rounded shadow-md text-center">
-                    <h2 className="text-2xl font-bold mb-4">Europa-Park Fan Login</h2>
-                    <p className="mb-4 text-gray-600">Simulation: Ein Klick loggt dich ein.</p>
-                    <button 
-                        onClick={handleLogin}
-                        className="bg-ep-blue text-white px-6 py-2 rounded hover:bg-blue-900"
-                    >
-                        Als Demo-Nutzer anmelden
-                    </button>
+            <div className="flex items-center justify-center min-h-[80vh] bg-gray-50">
+                <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full border border-gray-200">
+                    <div className="mb-6 flex justify-center">
+                         <div className="h-12 w-12 bg-ep-blue rounded-full flex items-center justify-center text-white font-bold text-xl">C</div>
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2 text-gray-900">Europa-Park Fan Login</h2>
+                    <p className="mb-6 text-gray-600 text-sm">Melde dich an, um deine Alarme zu verwalten.</p>
+                    
+                    <div className="space-y-4">
+                        <input type="email" placeholder="E-Mail Adresse" className="w-full p-2 border border-gray-300 rounded" defaultValue="demo@fan.de"/>
+                        <input type="password" placeholder="Passwort" className="w-full p-2 border border-gray-300 rounded" defaultValue="password"/>
+                        <button 
+                            onClick={handleLogin}
+                            className="w-full bg-ep-blue text-white px-6 py-3 rounded-md hover:bg-blue-900 font-bold transition-colors"
+                        >
+                            Einloggen
+                        </button>
+                    </div>
+                    <div className="mt-6 border-t pt-4 text-sm">
+                        <button onClick={() => setCurrentPage('customer-register')} className="text-ep-blue hover:underline">Noch keinen Account? Registrieren</button>
+                    </div>
                 </div>
             </div>
         )}
+
+        {/* Partner Login Mock */}
+        {currentPage === 'partner-login' && (
+            <div className="flex items-center justify-center min-h-[80vh] bg-gray-100">
+                <div className="bg-white p-8 rounded-lg shadow-xl text-center max-w-md w-full border-t-4 border-ep-gold">
+                    <div className="mb-6 flex justify-center">
+                         <div className="h-12 w-12 bg-gray-900 rounded-full flex items-center justify-center text-ep-gold font-bold">
+                             <Briefcase className="w-6 h-6"/>
+                         </div>
+                    </div>
+                    <h2 className="text-2xl font-bold mb-2 text-gray-900">Partner Programm Login</h2>
+                    <p className="mb-6 text-gray-600 text-sm">Zugang für Affiliate Partner & Influencer.</p>
+                    
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <input type="email" placeholder="Partner E-Mail" className="w-full p-3 border border-gray-300 rounded bg-gray-50" defaultValue="partner@demo.de"/>
+                        </div>
+                        <div className="relative">
+                             <input type="password" placeholder="Passwort" className="w-full p-3 border border-gray-300 rounded bg-gray-50" defaultValue="secret"/>
+                        </div>
+                        
+                        <button 
+                            onClick={handlePartnerLogin}
+                            className="w-full bg-ep-gold text-ep-blue px-6 py-3 rounded-md hover:bg-yellow-500 font-bold transition-colors shadow-md flex items-center justify-center gap-2"
+                        >
+                            <Lock className="w-4 h-4"/> Ins Partner Dashboard
+                        </button>
+                    </div>
+                    <div className="mt-6 flex justify-between items-center text-sm text-gray-500">
+                        <button onClick={() => setCurrentPage('home')} className="flex items-center hover:text-gray-900"><ArrowLeft className="w-3 h-3 mr-1"/> Zur Startseite</button>
+                        <button onClick={() => setCurrentPage('partner-register')} className="text-ep-blue hover:underline font-medium">Partner werden</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
       </main>
 
       <footer className="bg-gray-800 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="text-center md:text-left">
             <span className="font-bold text-lg">ResortPassAlarm</span>
             <p className="text-xs text-gray-400">Überwachung für Europa-Park ResortPass Gold & Silver.</p>
             <p className="text-xs text-gray-500 mt-1">Keine offizielle Seite des Europa-Park Resorts.</p>
           </div>
-          <div className="flex space-x-6 text-sm text-gray-400">
-            <button onClick={() => setCurrentPage('imprint')} className="hover:text-white text-gray-400">Impressum</button>
-            <button onClick={() => setCurrentPage('privacy')} className="hover:text-white text-gray-400">Datenschutz</button>
-            <button onClick={() => setCurrentPage('partner-info')} className="hover:text-white text-gray-400">Partnerprogramm</button>
-            <button onClick={() => setCurrentPage('admin')} className="hover:text-white text-gray-600">Admin Login</button>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm text-gray-400">
+            <button onClick={() => setCurrentPage('imprint')} className="hover:text-white text-gray-400 transition-colors">Impressum</button>
+            <button onClick={() => setCurrentPage('privacy')} className="hover:text-white text-gray-400 transition-colors">Datenschutz</button>
+            <button onClick={() => setCurrentPage('partner-info')} className="hover:text-white text-gray-400 transition-colors">Partnerprogramm Infos</button>
+            <button onClick={() => setCurrentPage('partner-login')} className="hover:text-white text-ep-gold font-medium transition-colors">Partner Login</button>
+            <button onClick={() => setCurrentPage('admin')} className="hover:text-white text-gray-600 transition-colors border-l border-gray-600 pl-4">Admin Login</button>
           </div>
         </div>
       </footer>
