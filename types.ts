@@ -22,6 +22,7 @@ export interface User {
   phoneNumber?: string; // Neu hinzugefügt
   isSubscribed: boolean;
   isAffiliate: boolean;
+  isAdmin?: boolean;
   joinedDate?: Date;
   affiliateProfile?: AffiliateProfile;
   referredBy?: string; // Neu: Tracking

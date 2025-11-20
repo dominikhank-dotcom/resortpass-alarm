@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './pages/LandingPage';
 import { Dashboard } from './pages/Dashboard';
@@ -11,6 +11,7 @@ import { ImprintPage } from './pages/ImprintPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { User, AvailabilityStatus } from './types';
 import { ArrowLeft, Briefcase, Lock } from 'lucide-react';
+import { checkSession, loginUser, logoutUser } from './services/storageService';
 
 const MOCK_USER: User = {
   id: 'u1',
@@ -18,7 +19,17 @@ const MOCK_USER: User = {
   email: 'max@beispiel.de',
   phoneNumber: '+49 170 1234567',
   isSubscribed: true,
-  isAffiliate: true
+  isAffiliate: true,
+  isAdmin: false
+};
+
+const ADMIN_USER: User = {
+  id: 'admin1',
+  name: 'Dominik Hank',
+  email: 'admin@resortpass-alarm.de',
+  isSubscribed: true,
+  isAffiliate: true,
+  isAdmin: true
 };
 
 export interface StatusState {
@@ -36,64 +47,93 @@ const App: React.FC = () => {
       silver: AvailabilityStatus.SOLD_OUT
   });
 
+  // Load session on mount
+  useEffect(() => {
+      const session = checkSession();
+      if (session) {
+          setUser(session);
+          // Wenn User eingeloggt ist, aber auf Home ist, bleib auf Home oder geh zum Dashboard?
+          // Standardverhalten: Bleib da wo du bist, aber User State ist da.
+          // Falls wir auf einer "Auth-Only" Seite neu laden, müsste man das prüfen.
+          // Einfachheitshalber bleiben wir auf 'home' initial, es sei denn wir wollen redirecten.
+      }
+  }, []);
+
+  // Zentraler Navigations-Wrapper, der immer nach oben scrollt
+  const navigateTo = (page: string) => {
+      window.scrollTo(0, 0);
+      setCurrentPage(page);
+  };
+
   // Kunde Login
-  const handleLogin = () => {
-    setUser(MOCK_USER);
-    setCurrentPage('dashboard');
+  const handleLogin = (asAdmin: boolean = false) => {
+    const userToLogin = asAdmin ? ADMIN_USER : MOCK_USER;
+    loginUser(userToLogin);
+    setUser(userToLogin);
+    navigateTo('dashboard');
   };
 
   // Partner Login (Spezifisch)
   const handlePartnerLogin = () => {
-      setUser({
+      const partnerUser = {
           ...MOCK_USER,
           name: 'Partner Demo',
-          isAffiliate: true
-      });
-      setCurrentPage('affiliate');
+          isAffiliate: true,
+          isAdmin: false
+      };
+      loginUser(partnerUser);
+      setUser(partnerUser);
+      navigateTo('affiliate');
   };
 
   const handleLogout = () => {
+    logoutUser();
     setUser(null);
-    setCurrentPage('home');
+    navigateTo('home');
   };
 
   // Funktion um User-Daten (z.B. Email/Tel) zu aktualisieren
   const handleUpdateUser = (updatedData: Partial<User>) => {
       if (user) {
-          setUser({ ...user, ...updatedData });
+          const newUser = { ...user, ...updatedData };
+          loginUser(newUser); // Update storage
+          setUser(newUser);
       }
   };
 
   const navigate = (page: string) => {
     if (!user && (page === 'dashboard' || page === 'affiliate')) {
         if (page === 'affiliate') {
-            setCurrentPage('partner-login');
+            navigateTo('partner-login');
         } else {
-            handleLogin(); // Default fallback
+            // Für Dashboard Zugriff -> Login Screen
+            navigateTo('login'); 
         }
         return;
     }
-    setCurrentPage(page);
+    navigateTo(page);
   };
 
   // ADMIN ROUTE: Renders full screen without standard navbar
   if (currentPage === 'admin') {
-      return <AdminPanel onBack={() => setCurrentPage('dashboard')} />;
+      return <AdminPanel onBack={() => navigateTo('dashboard')} />;
   }
 
   // PARTNER REGISTRATION ROUTE: Full screen (Focus mode)
   if (currentPage === 'partner-register') {
       return (
         <PartnerRegistration 
-            onBack={() => setCurrentPage('partner-info')}
-            onLogin={() => setCurrentPage('partner-login')}
+            onBack={() => navigateTo('partner-info')}
+            onLogin={() => navigateTo('partner-login')}
             onRegister={(userData) => {
-                // Simulate creating a new partner user
-                setUser({
+                const newUser = {
                     id: 'p-' + Date.now(),
-                    ...userData
-                });
-                setCurrentPage('affiliate');
+                    ...userData,
+                    isAdmin: false
+                };
+                loginUser(newUser);
+                setUser(newUser);
+                navigateTo('affiliate');
             }}
         />
       );
@@ -103,15 +143,17 @@ const App: React.FC = () => {
   if (currentPage === 'customer-register') {
       return (
           <CustomerRegistration 
-              onBack={() => setCurrentPage('home')}
-              onLogin={() => setCurrentPage('login')}
+              onBack={() => navigateTo('home')}
+              onLogin={() => navigateTo('login')}
               onRegister={(userData) => {
-                  // Simulate creating a new customer (NOT SUBSCRIBED yet)
-                  setUser({
+                  const newUser = {
                       id: 'c-' + Date.now(),
-                      ...userData
-                  });
-                  setCurrentPage('dashboard');
+                      ...userData,
+                      isAdmin: false
+                  };
+                  loginUser(newUser);
+                  setUser(newUser);
+                  navigateTo('dashboard');
               }}
           />
       );
@@ -130,22 +172,21 @@ const App: React.FC = () => {
         {currentPage === 'home' && (
           <LandingPage 
             onSubscribe={() => {
-                // Statt Mock-User zu setzen, gehen wir zur Registrierung
                 if (user) {
-                    setCurrentPage('dashboard');
+                    navigateTo('dashboard');
                 } else {
-                    setCurrentPage('customer-register');
+                    navigateTo('customer-register');
                 }
             }} 
             onPartner={() => {
-                // Falls schon eingeloggt -> Dashboard, sonst -> Info Seite -> Registrierung
                 if (user?.isAffiliate) {
-                    setCurrentPage('affiliate');
+                    navigateTo('affiliate');
                 } else {
-                    setCurrentPage('partner-info');
+                    // ÄNDERUNG: Gehe direkt zur Registrierung, nicht zur Info-Seite
+                    navigateTo('partner-register');
                 }
             }}
-            onPartnerInfo={() => setCurrentPage('partner-info')}
+            onPartnerInfo={() => navigateTo('partner-info')}
           />
         )}
         
@@ -165,9 +206,9 @@ const App: React.FC = () => {
         {currentPage === 'partner-info' && (
           <PartnerProgramPage 
               onJoin={() => {
-                  setCurrentPage('partner-register');
+                  navigateTo('partner-register');
               }}
-              onBack={() => setCurrentPage('home')}
+              onBack={() => navigateTo('home')}
           />
         )}
 
@@ -192,15 +233,25 @@ const App: React.FC = () => {
                     <div className="space-y-4">
                         <input type="email" placeholder="E-Mail Adresse" className="w-full p-2 border border-gray-300 rounded" defaultValue="demo@fan.de"/>
                         <input type="password" placeholder="Passwort" className="w-full p-2 border border-gray-300 rounded" defaultValue="password"/>
-                        <button 
-                            onClick={handleLogin}
-                            className="w-full bg-ep-blue text-white px-6 py-3 rounded-md hover:bg-blue-900 font-bold transition-colors"
-                        >
-                            Einloggen
-                        </button>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <button 
+                                onClick={() => handleLogin(false)}
+                                className="w-full bg-ep-blue text-white px-4 py-3 rounded-md hover:bg-blue-900 font-bold transition-colors text-sm"
+                            >
+                                Als Kunde
+                            </button>
+                             <button 
+                                onClick={() => handleLogin(true)}
+                                className="w-full bg-gray-700 text-white px-4 py-3 rounded-md hover:bg-gray-800 font-bold transition-colors text-sm border border-gray-600"
+                            >
+                                Als Admin
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">(Wähle Admin um Zugriff auf Demo-Tools zu haben)</p>
                     </div>
                     <div className="mt-6 border-t pt-4 text-sm">
-                        <button onClick={() => setCurrentPage('customer-register')} className="text-ep-blue hover:underline">Noch keinen Account? Registrieren</button>
+                        <button onClick={() => navigateTo('customer-register')} className="text-ep-blue hover:underline">Noch keinen Account? Registrieren</button>
                     </div>
                 </div>
             </div>
@@ -234,8 +285,8 @@ const App: React.FC = () => {
                         </button>
                     </div>
                     <div className="mt-6 flex justify-between items-center text-sm text-gray-500">
-                        <button onClick={() => setCurrentPage('home')} className="flex items-center hover:text-gray-900"><ArrowLeft className="w-3 h-3 mr-1"/> Zur Startseite</button>
-                        <button onClick={() => setCurrentPage('partner-register')} className="text-ep-blue hover:underline font-medium">Partner werden</button>
+                        <button onClick={() => navigateTo('home')} className="flex items-center hover:text-gray-900"><ArrowLeft className="w-3 h-3 mr-1"/> Zur Startseite</button>
+                        <button onClick={() => navigateTo('partner-register')} className="text-ep-blue hover:underline font-medium">Partner werden</button>
                     </div>
                 </div>
             </div>
@@ -251,11 +302,11 @@ const App: React.FC = () => {
             <p className="text-xs text-gray-500 mt-1">Keine offizielle Seite des Europa-Park Resorts.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-sm text-gray-400">
-            <button onClick={() => setCurrentPage('imprint')} className="hover:text-white text-gray-400 transition-colors">Impressum</button>
-            <button onClick={() => setCurrentPage('privacy')} className="hover:text-white text-gray-400 transition-colors">Datenschutz</button>
-            <button onClick={() => setCurrentPage('partner-info')} className="hover:text-white text-gray-400 transition-colors">Partnerprogramm Infos</button>
-            <button onClick={() => setCurrentPage('partner-login')} className="hover:text-white text-ep-gold font-medium transition-colors">Partner Login</button>
-            <button onClick={() => setCurrentPage('admin')} className="hover:text-white text-gray-600 transition-colors border-l border-gray-600 pl-4">Admin Login</button>
+            <button onClick={() => navigateTo('imprint')} className="hover:text-white text-gray-400 transition-colors">Impressum</button>
+            <button onClick={() => navigateTo('privacy')} className="hover:text-white text-gray-400 transition-colors">Datenschutz</button>
+            <button onClick={() => navigateTo('partner-info')} className="hover:text-white text-gray-400 transition-colors">Partnerprogramm Infos</button>
+            <button onClick={() => navigateTo('partner-login')} className="hover:text-white text-ep-gold font-medium transition-colors">Partner Login</button>
+            <button onClick={() => navigateTo('admin')} className="hover:text-white text-gray-600 transition-colors border-l border-gray-600 pl-4">Admin Login</button>
           </div>
         </div>
       </footer>
